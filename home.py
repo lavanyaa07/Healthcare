@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # =========================================================
-# LOAD DATA (Cloud Safe)
+# LOAD DATA (CLOUD SAFE)
 # =========================================================
 @st.cache_data
 def load_data():
@@ -28,7 +28,7 @@ df = load_data()
 # SIDEBAR
 # =========================================================
 st.sidebar.title("🏥 Healthcare Dashboard")
-st.sidebar.markdown("Analyze healthcare data using **EDA**")
+st.sidebar.markdown("Exploratory Data Analysis")
 
 page = st.sidebar.radio(
     "📌 Navigation",
@@ -49,14 +49,14 @@ if page == "Overview":
     st.markdown("""
     ### 📘 Project Objective
     This dashboard performs **Exploratory Data Analysis (EDA)** on a healthcare dataset
-    to understand patient trends, distributions, and patterns across medical attributes.
+    to identify trends, distributions, and patterns in patient-related data.
     """)
 
     col1, col2, col3 = st.columns(3)
 
     col1.metric("Total Records", f"{df.shape[0]:,}")
     col2.metric("Total Features", df.shape[1])
-    col3.metric("Missing Values", int(df.isnull().sum().sum()))
+    col3.metric("Total Missing Values", int(df.isnull().sum().sum()))
 
     st.success("✅ Dataset loaded successfully")
 
@@ -66,7 +66,7 @@ if page == "Overview":
 elif page == "Dataset":
     st.title("📁 Dataset Overview")
 
-    st.subheader("Preview of Dataset")
+    st.subheader("Dataset Preview")
     st.dataframe(df.head())
 
     col1, col2 = st.columns(2)
@@ -88,86 +88,107 @@ elif page == "Exploratory Data Analysis":
     chart = st.selectbox(
         "Select Analysis",
         [
-            "Age Distribution",
-            "Gender Distribution",
-            "Patients by Medical Condition",
-            "Billing Amount Distribution",
-            "Admission Type Distribution"
+            "Numeric Distribution",
+            "Categorical Distribution",
+            "Top Categories",
+            "Value Distribution",
+            "Correlation Heatmap"
         ]
     )
 
-    # -------------------------------
-    # Age Distribution
-    # -------------------------------
-    if chart == "Age Distribution":
-        fig, ax = plt.subplots(figsize=(10, 4))
-        sns.histplot(df["Age"], bins=30, kde=True, ax=ax)
-        ax.set_title("Age Distribution of Patients")
-        ax.set_xlabel("Age")
-        ax.set_ylabel("Count")
-        st.pyplot(fig)
+    numeric_cols = df.select_dtypes(include=["int64", "float64"]).columns
+    categorical_cols = df.select_dtypes(include=["object"]).columns
 
     # -------------------------------
-    # Gender Distribution
+    # Numeric Distribution
     # -------------------------------
-    elif chart == "Gender Distribution":
-        gender_counts = df["Gender"].value_counts()
-        fig, ax = plt.subplots(figsize=(6, 4))
-        sns.barplot(x=gender_counts.index, y=gender_counts.values, ax=ax)
-        ax.set_title("Gender Distribution")
-        ax.set_xlabel("Gender")
-        ax.set_ylabel("Number of Patients")
-        st.pyplot(fig)
+    if chart == "Numeric Distribution":
+        if len(numeric_cols) > 0:
+            col = numeric_cols[0]
+            fig, ax = plt.subplots(figsize=(10, 4))
+            sns.histplot(df[col].dropna(), bins=30, kde=True, ax=ax)
+            ax.set_title(f"Distribution of {col}")
+            ax.set_xlabel(col)
+            st.pyplot(fig)
+        else:
+            st.warning("No numeric columns available.")
 
     # -------------------------------
-    # Medical Condition Count
+    # Categorical Distribution
     # -------------------------------
-    elif chart == "Patients by Medical Condition":
-        condition_counts = df["Medical_Condition"].value_counts().head(10)
-        fig, ax = plt.subplots(figsize=(10, 5))
-        sns.barplot(x=condition_counts.values, y=condition_counts.index, ax=ax)
-        ax.set_title("Top Medical Conditions")
-        ax.set_xlabel("Number of Patients")
-        st.pyplot(fig)
+    elif chart == "Categorical Distribution":
+        if len(categorical_cols) > 0:
+            col = categorical_cols[0]
+            counts = df[col].value_counts()
+            fig, ax = plt.subplots(figsize=(6, 4))
+            sns.barplot(x=counts.index, y=counts.values, ax=ax)
+            ax.set_title(f"Distribution of {col}")
+            ax.set_ylabel("Count")
+            st.pyplot(fig)
+        else:
+            st.warning("No categorical columns available.")
 
     # -------------------------------
-    # Billing Amount Distribution
+    # Top Categories
     # -------------------------------
-    elif chart == "Billing Amount Distribution":
-        fig, ax = plt.subplots(figsize=(10, 4))
-        sns.histplot(df["Billing_Amount"], bins=40, kde=True, ax=ax)
-        ax.set_title("Billing Amount Distribution")
-        ax.set_xlabel("Billing Amount")
-        st.pyplot(fig)
+    elif chart == "Top Categories":
+        if len(categorical_cols) > 0:
+            col = categorical_cols[0]
+            top_vals = df[col].value_counts().head(10)
+            fig, ax = plt.subplots(figsize=(10, 5))
+            sns.barplot(x=top_vals.values, y=top_vals.index, ax=ax)
+            ax.set_title(f"Top Categories in {col}")
+            st.pyplot(fig)
+        else:
+            st.warning("No categorical columns available.")
 
     # -------------------------------
-    # Admission Type Distribution
+    # Value Distribution
     # -------------------------------
-    elif chart == "Admission Type Distribution":
-        admission_counts = df["Admission_Type"].value_counts()
-        fig, ax = plt.subplots(figsize=(6, 4))
-        sns.barplot(x=admission_counts.index, y=admission_counts.values, ax=ax)
-        ax.set_title("Admission Type Distribution")
-        ax.set_xlabel("Admission Type")
-        ax.set_ylabel("Count")
-        st.pyplot(fig)
+    elif chart == "Value Distribution":
+        if len(numeric_cols) > 0:
+            col = numeric_cols[-1]
+            fig, ax = plt.subplots(figsize=(10, 4))
+            sns.histplot(df[col].dropna(), bins=40, kde=False, ax=ax)
+            ax.set_title(f"Value Distribution of {col}")
+            st.pyplot(fig)
+        else:
+            st.warning("No numeric columns available.")
+
+    # -------------------------------
+    # Correlation Heatmap
+    # -------------------------------
+    elif chart == "Correlation Heatmap":
+        if len(numeric_cols) >= 2:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.heatmap(
+                df[numeric_cols].corr(),
+                annot=True,
+                fmt=".2f",
+                cmap="coolwarm",
+                ax=ax
+            )
+            ax.set_title("Correlation Heatmap")
+            st.pyplot(fig)
+        else:
+            st.warning("Not enough numeric columns for correlation.")
 
 # =========================================================
-# INSIGHTS PAGE
+# CONCLUSION PAGE
 # =========================================================
 elif page == "Key Insights & Conclusion":
     st.title("💡 Key Insights & Conclusion")
 
     st.markdown("""
     ### 🔍 Key Insights
-    - Majority of patients fall within the adult and middle-age groups.
-    - Certain medical conditions dominate patient admissions.
-    - Billing amounts show wide variation, indicating diverse treatment costs.
-    - Emergency and routine admissions form major admission categories.
+    - Numerical features show varying distributions and ranges.
+    - Certain categories dominate patient records.
+    - Missing values exist and may require preprocessing.
+    - Correlation analysis helps identify related healthcare attributes.
 
     ### ✅ Final Conclusion
-    This EDA provides a clear understanding of healthcare data patterns and
-    prepares the dataset for further statistical analysis or predictive modeling.
+    This EDA provides a strong foundation for understanding healthcare data
+    and supports further statistical analysis or machine learning tasks.
     """)
 
-    st.success("🎉 EDA completed successfully!")
+    st.success("🎉 EDA completed successfully")
